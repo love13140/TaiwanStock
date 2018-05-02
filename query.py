@@ -50,6 +50,16 @@ def RSI_between_interval( close_list, time_period, max_rsi, min_rsi ):
 def RSI5_between_28_and_18( close_list ):
         return RSI_between_interval( close_list, time_period=5, max_rsi=28, min_rsi=18)
 
+def KD5(data_frame):
+    return talib.STOCH( high=normalize_list2talib(data_frame['high']), 
+                            low=normalize_list2talib(data_frame['low']), 
+                            close=normalize_list2talib(data_frame['close']),
+                            fastk_period=5,
+                            slowk_period=3,
+                            slowk_matype=0,
+                            slowd_period=3,
+                            slowd_matype=0)
+
 def juristic_volumn_buysuper_5_days_strong( juristic_volumn ):
     return juristic_volumn[0] >= juristic_volumn[1] >= juristic_volumn[2] >= juristic_volumn[3] >= juristic_volumn[4] >= 50
 
@@ -96,22 +106,37 @@ def get_buy_signal(data_frame):
 
     signal = ''
     if close_overthan_MA20_overthan_MA60(data_frame['close']) and close_overthan_MA60_overthan_MA120(data_frame['close']):
-        signal += '收盤價>MA20>MA60>MA120'
+        signal += 'Close>MA20>MA60>MA120'
     elif close_overthan_MA20_overthan_MA60(data_frame['close']):
-        signal += '收盤價>MA20>MA60'
+        signal += 'Close>MA20>MA60'
     elif close_overthan_MA60_overthan_MA120(data_frame['close']):
-        signal += '收盤價>MA60>MA120'
+        signal += 'Close>MA60>MA120'
     else:
         return False
 
+    RSI_signal = True
+    rsi5 = RSI5(data_frame['close'])
     if RSI5_between_28_and_18(data_frame['close']):
-        signal += ', RSI 顯示超賣'
-        RSI_signal = True
+        signal += ', RSI 顯示超賣:%4.2f' % rsi5
+    elif RSI5(data_frame['close']) > 85:
+        signal += ', RSI 顯示超買:%4.2f' % rsi5
+        RSI_signal = False
     else:
         RSI_signal = False
 
-    if RSI5(data_frame['close']) > 85:
-        signal += ', RSI 顯示超買需注意'
+
+    KD_signal = True;
+    slowk, slowd = KD5(data_frame)
+    if slowk[-1] > slowd[-1] and slowk[-2] < slowd[-2]:
+        signal += ', KD 黃金交叉 (%4.2f, %4.2f)' % (slowk[-1], slowd[-1])
+    if slowk[-1] < 15 or slowd[-1] < 15:
+        signal += ', KD 顯示超賣 K:%4.2f' % slowk[-1]
+    elif slowk[-1] > 85 or slowd[-1] > 85:
+        signal += ', KD 顯示超買 K:%4.2f' % slowk[-1]
+        KD_signal = False;
+    else:
+        KD_signal = False;
+    
 
     juristic_signal = True
     if juristic_volumn_buysuper_5_days_strong(data_frame['juristic_volumn']):
@@ -136,7 +161,7 @@ def get_buy_signal(data_frame):
     elif close_rise_3_days(data_frame['close']):
         signal += ', 連續3日上漲'
 
-    if RSI_signal or juristic_signal:
+    if RSI_signal or KD_signal or juristic_signal:
         return signal
     else:
         return False
@@ -185,6 +210,6 @@ for sid in stock_list:
             elif signal1day:
                 signal += ', 連續二日買進信號'
 
-            print('%s: RSI5=%4.2f, Close=%6.2f, %6.2f, %6.2f, MA20=%6.2f, MA60=%6.2f, 法人三日買賣=%5d, %5d, %5d : %s'
-                     % (sid, rsi5, cl[0], cl[1], cl[2], ma20, ma60, jtl[0], jtl[1], jtl[2], signal))
+            print('%s: Close3D=[%6.2f, %6.2f, %6.2f], MA20/60=[%6.2f, %6.2f], Juristic3D=[%5d, %5d, %5d] : %s'
+                     % (sid, cl[0], cl[1], cl[2], ma20, ma60, jtl[0], jtl[1], jtl[2], signal))
 stockdb.close()

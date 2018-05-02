@@ -1,0 +1,10 @@
+### initialized and push
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin https://github.com/love13140/TaiwanStock.git
+git push -u origin master
+
+## push
+git remote add origin https://github.com/love13140/TaiwanStock.git
+git push -u origin master
