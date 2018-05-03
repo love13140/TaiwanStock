@@ -68,10 +68,10 @@ def get_twse_juristic_person_daily_volumn_rpt(date):
 #}}}#
 
 ## main
-n_days = 30
-#date = datetime.datetime.now().date()
-date = datetime.datetime(2017, 5, 21).date()
-update_juristic = False
+n_days = 1
+date = datetime.datetime.now().date()
+#date = datetime.datetime(2017, 5, 21).date()
+update_juristic = True
 
 stockdb = pymysql.connect(db = 'stockdb', user='root', passwd='root', host='localhost', unix_socket='/tmp/mysql.sock')
 sdbcur = stockdb.cursor()
