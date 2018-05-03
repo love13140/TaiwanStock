@@ -1,13 +1,20 @@
 #!/usr/local/bin/python3
 
+import os
 import sys
+sys.path.append(os.getcwd())
+
 import talib
-import numpy as np
 import pymysql
 import itertools
+
+import numpy as np
 import pandas.io.sql as pdsql
 import matplotlib.pyplot as plot
+
 from twstock import codes
+
+
 
 def get_mysql_fetch_cmd( stockid, time_period ):
     sql_cmd = 'SELECT * FROM STOCKDB WHERE stockid = \'' + str(stockid) + \

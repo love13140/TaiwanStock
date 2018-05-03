@@ -1,27 +1,17 @@
 #!/usr/local/bin/python3
+import os
+import sys
+sys.path.append(os.getcwd())
 
-import datetime
+import mysql_cmd
+
 import time
-import requests
 import pymysql
-import pandas as pd
+import datetime
+import requests
 import numpy as np
-from enum import Enum
+import pandas as pd
 from io import StringIO
-
-def check_mysql_table_exists(dbcon, tablename):
-    sdbcur = dbcon.cursor()
-    sdbcur.execute("""
-                          SELECT COUNT(*)
-                          FROM information_schema.tables
-                          WHERE table_name = '{0}'
-                          """.format(tablename.replace('\'', '\'\'')))
-    if sdbcur.fetchone()[0] == 1:
-        sdbcur.close()
-        return True
-
-    sdbcur.close()
-    return False
 
 #{{{# exxcel getting
 def get_twse_price_rpt(date_str):
@@ -69,61 +59,36 @@ def get_twse_juristic_person_daily_volumn_rpt(date):
 
 ## main
 n_days = 1
-date = datetime.datetime.now().date()
-#date = datetime.datetime(2017, 5, 21).date()
-update_juristic = True
+#date = datetime.datetime.now().date()
+date = datetime.datetime(2017, 4, 21).date()
+update_juristic = False
 
 stockdb = pymysql.connect(db = 'stockdb', user='root', passwd='root', host='localhost', unix_socket='/tmp/mysql.sock')
 sdbcur = stockdb.cursor()
 
-if check_mysql_table_exists( stockdb, 'STOCKDB' ) == False:
-    sdbcur.execute("""
-                        CREATE TABLE STOCKDB (
-                            stockid CHAR(16),
-                            date DATE,
-                            volumn FLOAT,
-                            open FLOAT,
-                            high FLOAT,
-                            low FLOAT,
-                            close FLOAT,
-                            changes FLOAT,
-                            up_down CHAR(1),
-                            juristic_volumn FLOAT,
-                            pe_ratio FLOAT
-                        );
-                  """)
+if mysql_cmd.check_mysql_table_exists( stockdb, 'STOCKDB' ) == False:
+    mysql_cmd.create_stockdb_table(sdbcur)
 
-if check_mysql_table_exists( stockdb, 'JURISTICDB' ) == False:
-    dbcur.execute("""
-                        CREATE TABLE JURISTICDB (
-                            date DATE,
-                            buy_volumn  BIGINT,
-                            sold_volumn BIGINT,
-                            diff_volumn BIGINT
-                        );
-                  """)
+if mysql_cmd.check_mysql_table_exists( stockdb, 'JURISTICDB' ) == False:
+    mysql_cmd.create_stockdb_table(sdbcur)
 
 fail_count = 1
 date_count = 0
 allow_continuous_fail_count = 10
-sdb_index = 'stockid, date, volumn, open, high, low, close, changes, up_down, juristic_volumn, pe_ratio'
-jdb_index = 'date, buy_volumn, sold_volumn, diff_volumn'
 while date_count < n_days:
     print('parsing', date)
     try:
-        # 抓資料
         date_str        = str(date)
         price_data      = get_twse_price_rpt(date_str)
         juristic_data   = get_twse_juristic_person_volumn_rpt(date)
         if update_juristic:
-            jur_vol_data    = get_twse_juristic_person_daily_volumn_rpt(date)
+            jur_vol_data = get_twse_juristic_person_daily_volumn_rpt(date)
 
         fail_count = 0
-        mysql_date  = 'str_to_date(\'' + date_str + '\',\'%Y-%m-%d\')'
+        mysql_date = mysql_cmd.get_mysql_str2date_cmd(date_str)
         print('parsing stock data...')
         for stockid in price_data.index:
-            sql_cmd     = "select exists(select 1 from STOCKDB where stockid = \'" + stockid + "\' AND date = " + mysql_date + ");"
-
+            sql_cmd = "SELECT EXISTS(SELECT 1 FROM STOCKDB WHERE stockid = \'" + stockid + "\' AND date = " + mysql_date + ");"
             sdbcur.execute(sql_cmd)
             row = sdbcur.fetchall()
             if row[0][0] == 1:
@@ -144,18 +109,16 @@ while date_count < n_days:
 
                 volumn = float(price_data.loc[stockid][0]) / 1000.0
                     
-                value = '\'' + stockid                          + '\','  + mysql_date                       + ", "   + str(volumn ) + \
-                        ", " + str(price_data.loc[stockid][1] ) + ", "   + str(price_data.loc[stockid][2] ) + ", "   + str(price_data.loc[stockid][3] ) + \
-                        ", " + str(price_data.loc[stockid][4] ) + ", "   + str(changes) + ", \'" + up_down + "\',"   + str(juristic_volumn)           + \
-                        ", " + str(price_data.loc[stockid][7] )
-
-            sql_cmd = 'INSERT INTO STOCKDB(' + sdb_index + ') VALUES(' + value + ');'
-            sdbcur.execute(sql_cmd)
-            stockdb.commit()
+                value = '\'' + stockid                          + '\','  + mysql_date                       + ', '   + str(volumn ) + \
+                        ', ' + str(price_data.loc[stockid][1] ) + ', '   + str(price_data.loc[stockid][2] ) + ', '   + str(price_data.loc[stockid][3] ) + \
+                        ', ' + str(price_data.loc[stockid][4] ) + ', '   + str(changes) + ', \'' + up_down + '\','   + str(juristic_volumn)           + \
+                        ', ' + str(price_data.loc[stockid][7] )
+                
+                mysql_cmd.insert_stock_data_into_db(sdbcur, value)
         ### end for
         if update_juristic:
             print('parsing juristic data...')
-            sql_cmd     = "select exists(select 1 from JURISTICDB where date = " + mysql_date + ");"
+            sql_cmd = 'SELECT EXISTS(SELECT 1 FROM JURISTICDB WHERE date = ' + mysql_date + ');'
             sdbcur.execute(sql_cmd)
             row = sdbcur.fetchall()
             if row[0][0] == 1:
@@ -167,9 +130,7 @@ while date_count < n_days:
                 str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['賣出金額']) + ', ' + \
                 str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['買賣差額']) 
 
-            sql_cmd = 'INSERT INTO JURISTICDB(' + jdb_index + ') VALUES(' + value + ');'
-            sdbcur.execute(sql_cmd)
-            stockdb.commit()
+            mysql_cmd.insert_juristic_data_into_db(dbcur, value)
 
     except:
         print('fail! check the date is holiday')
@@ -183,5 +144,5 @@ while date_count < n_days:
     date -= datetime.timedelta(days=1)
     time.sleep(10)
 
-
+stockdb.commit()
 stockdb.close()
