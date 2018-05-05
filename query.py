@@ -35,7 +35,7 @@ for sid in stock_list:
             ma60  = analysis.MA60(data_frame['close'])
             ma120 = analysis.MA120(data_frame['close'])
             
-            jtl   = [int(i) for i in data_frame['juristic_volumn'][0:3]]
+            jtl   = [int(i) for i in data_frame['juristic_volume'][0:3]]
             cl    = data_frame['close'][0:3]
 
             signal1day = analysis.get_buy_signal(data_frame.drop(data_frame.index[0]).reset_index(drop=True))

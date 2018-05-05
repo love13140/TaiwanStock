@@ -41,27 +41,27 @@ def KD5(data_frame):
                             slowd_period=3,
                             slowd_matype=0)
 
-def juristic_volumn_buysuper_5_days_strong( juristic_volumn ):
-    return juristic_volumn[0] >= juristic_volumn[1] >= juristic_volumn[2] >= juristic_volumn[3] >= juristic_volumn[4] >= 50
+def juristic_volume_buysuper_5_days_strong( juristic_volume ):
+    return juristic_volume[0] >= juristic_volume[1] >= juristic_volume[2] >= juristic_volume[3] >= juristic_volume[4] >= 50
 
-def juristic_volumn_buysuper_5_days( juristic_volumn ):
-    return juristic_volumn[0] > 100 and  juristic_volumn[1] > 100 and  juristic_volumn[2] > 100 and  juristic_volumn[3] > 100 and  juristic_volumn[4] > 100
+def juristic_volume_buysuper_5_days( juristic_volume ):
+    return juristic_volume[0] > 100 and  juristic_volume[1] > 100 and  juristic_volume[2] > 100 and  juristic_volume[3] > 100 and  juristic_volume[4] > 100
 
-def juristic_volumn_buysuper_4_days_strong( juristic_volumn ):
-    return juristic_volumn[0] >= juristic_volumn[1] >= juristic_volumn[2] >= juristic_volumn[3] >=  50
+def juristic_volume_buysuper_4_days_strong( juristic_volume ):
+    return juristic_volume[0] >= juristic_volume[1] >= juristic_volume[2] >= juristic_volume[3] >=  50
 
-def juristic_volumn_buysuper_4_days( juristic_volumn ):
-    return juristic_volumn[0] > 100 and  juristic_volumn[1] > 100 and  juristic_volumn[2] > 100 and  juristic_volumn[3] > 100
+def juristic_volume_buysuper_4_days( juristic_volume ):
+    return juristic_volume[0] > 100 and  juristic_volume[1] > 100 and  juristic_volume[2] > 100 and  juristic_volume[3] > 100
 
-def juristic_volumn_buysuper_3_days_strong( juristic_volumn ):
-    return juristic_volumn[0] >= juristic_volumn[1] >= juristic_volumn[2] >= 50
+def juristic_volume_buysuper_3_days_strong( juristic_volume ):
+    return juristic_volume[0] >= juristic_volume[1] >= juristic_volume[2] >= 50
 
-def juristic_volumn_buysuper_3_days( juristic_volumn ):
-    return juristic_volumn[0] > 100 and  juristic_volumn[1] > 100 and  juristic_volumn[2] > 100
+def juristic_volume_buysuper_3_days( juristic_volume ):
+    return juristic_volume[0] > 100 and  juristic_volume[1] > 100 and  juristic_volume[2] > 100
 
     
-def juristic_volumn_buysuper_reverse( juristic_volumn ):
-    return juristic_volumn[0] >= 50 >= juristic_volumn[1] > 0 > juristic_volumn[2]
+def juristic_volume_buysuper_reverse( juristic_volume ):
+    return juristic_volume[0] >= 50 >= juristic_volume[1] > 0 > juristic_volume[2]
 
 def close_rise_5_days(close_list):
     return close_list[0] > close_list[1] > close_list[2] > close_list[3] > close_list[4]
@@ -80,9 +80,9 @@ def close_overthan_MA20_overthan_MA60( close_list ):
     return close_list[0] > ma20 > ma60
 
 def get_buy_signal(data_frame):
-    if data_frame['volumn'][0] < 1000:
+    if data_frame['volume'][0] < 1000:
         return False
-    if data_frame['juristic_volumn'][0] == data_frame['juristic_volumn'][1] == data_frame['juristic_volumn'][2] == 0:
+    if data_frame['juristic_volume'][0] == data_frame['juristic_volume'][1] == data_frame['juristic_volume'][2] == 0:
         return False
 
     signal = ''
@@ -120,19 +120,19 @@ def get_buy_signal(data_frame):
     
 
     juristic_signal = True
-    if juristic_volumn_buysuper_5_days_strong(data_frame['juristic_volumn']):
+    if juristic_volume_buysuper_5_days_strong(data_frame['juristic_volume']):
         signal += ', 法人連續5日強力買超'
-    elif juristic_volumn_buysuper_5_days(data_frame['juristic_volumn']):
+    elif juristic_volume_buysuper_5_days(data_frame['juristic_volume']):
         signal += ', 法人連續5日買超'
-    elif juristic_volumn_buysuper_4_days_strong(data_frame['juristic_volumn']):
+    elif juristic_volume_buysuper_4_days_strong(data_frame['juristic_volume']):
         signal += ', 法人連續4日強力買超'
-    elif juristic_volumn_buysuper_4_days(data_frame['juristic_volumn']):
+    elif juristic_volume_buysuper_4_days(data_frame['juristic_volume']):
         signal += ', 法人連續4日買超'
-    elif juristic_volumn_buysuper_3_days_strong(data_frame['juristic_volumn']):
+    elif juristic_volume_buysuper_3_days_strong(data_frame['juristic_volume']):
         signal += ', 法人連續3日強力買超'
-    elif juristic_volumn_buysuper_3_days(data_frame['juristic_volumn']):
+    elif juristic_volume_buysuper_3_days(data_frame['juristic_volume']):
         signal += ', 法人連續3日買超'
-    elif juristic_volumn_buysuper_reverse(data_frame['juristic_volumn']):
+    elif juristic_volume_buysuper_reverse(data_frame['juristic_volume']):
         signal += ', 法人逆轉買超'
     else:
         juristic_signal = False

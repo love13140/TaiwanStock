@@ -6,6 +6,7 @@ sys.path.append(os.getcwd())
 import mysql_cmd
 
 import time
+import enum
 import pymysql
 import datetime
 import requests
@@ -13,7 +14,23 @@ import numpy as np
 import pandas as pd
 from io import StringIO
 
-#{{{# exxcel getting
+#{{{# Enum
+class StockJuristicTableIndex(enum.IntEnum):
+    BUY_VOLUME          = 0
+    SOLD_VOLUME         = 1
+    DIFF_VOLUME         = 2
+
+class StockCSVTableIndex(enum.IntEnum):
+    VOLUME              = 0
+    OPEN                = 1
+    HIGH                = 2
+    LOW                 = 3
+    CLOSE               = 4
+    UP_DOWN             = 5
+    CHANGES             = 6
+    PE_RATIO            = 7
+#}}}#
+#{{{# csv getting
 def get_twse_price_rpt(date_str):
     r = requests.post('http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=' + date_str.replace('-','') + '&type=ALL')
     ret = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) for i in r.text.split('\n') if len(i.split('",')) == 17 and i[0] != '='])), header=0)
@@ -27,7 +44,7 @@ def get_twse_price_rpt(date_str):
     ret['本益比']   = ret['本益比'].str.replace(',', '')
     return ret
 
-def get_twse_juristic_person_volumn_rpt(date):
+def get_twse_juristic_person_volume_rpt(date):
     date_str = str(date)
     r = requests.post('http://www.twse.com.tw/fund/T86?response=csv&date=' + date_str.replace('-','') + '&selectType=ALLBUT0999')
     ret = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) for i in r.text.split('\n')[1:-1] if i[0] != '='])), header=0)
@@ -44,7 +61,7 @@ def get_twse_juristic_person_volumn_rpt(date):
         
     return ret
 
-def get_twse_juristic_person_daily_volumn_rpt(date):
+def get_twse_juristic_person_daily_volume_rpt(date):
     date_str = str(date)
     r = requests.post('http://www.twse.com.tw/fund/BFI82U?response=csv&dayDate=' + date_str.replace('-','') + '&type=day')
     ret = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) for i in r.text.split('\n')[1:-1] if i[0] != '='])), header=0)
@@ -59,79 +76,85 @@ def get_twse_juristic_person_daily_volumn_rpt(date):
 
 ## main
 n_days = 1
-#date = datetime.datetime.now().date()
-date = datetime.datetime(2017, 4, 21).date()
-update_juristic = False
+date = datetime.datetime.now().date()
+#date = datetime.datetime(2017, 4, 19).date()
+#date = datetime.datetime(2017, 12, 25).date()
+update_stock    = True
+update_juristic = True
 
 stockdb = pymysql.connect(db = 'stockdb', user='root', passwd='root', host='localhost', unix_socket='/tmp/mysql.sock')
-sdbcur = stockdb.cursor()
+dbcur = stockdb.cursor()
 
 if mysql_cmd.check_mysql_table_exists( stockdb, 'STOCKDB' ) == False:
-    mysql_cmd.create_stockdb_table(sdbcur)
+    mysql_cmd.create_stockdb_table(dbcur)
 
 if mysql_cmd.check_mysql_table_exists( stockdb, 'JURISTICDB' ) == False:
-    mysql_cmd.create_stockdb_table(sdbcur)
+    mysql_cmd.create_juristicdb_table(dbcur)
 
 fail_count = 1
 date_count = 0
 allow_continuous_fail_count = 10
 while date_count < n_days:
-    print('parsing', date)
     try:
-        date_str        = str(date)
-        price_data      = get_twse_price_rpt(date_str)
-        juristic_data   = get_twse_juristic_person_volumn_rpt(date)
-        if update_juristic:
-            jur_vol_data = get_twse_juristic_person_daily_volumn_rpt(date)
-
-        fail_count = 0
+        print('parsing', date)
+        date_str = str(date)
         mysql_date = mysql_cmd.get_mysql_str2date_cmd(date_str)
-        print('parsing stock data...')
-        for stockid in price_data.index:
-            sql_cmd = "SELECT EXISTS(SELECT 1 FROM STOCKDB WHERE stockid = \'" + stockid + "\' AND date = " + mysql_date + ");"
-            sdbcur.execute(sql_cmd)
-            row = sdbcur.fetchall()
-            if row[0][0] == 1:
-                print('warning: stock data exists!')
-                fail_count += 1
-                break
-            if str(price_data.loc[stockid][4]) != '--':
-                juristic_volumn = 0
-                if stockid in juristic_data.index:
-                    juristic_volumn = int(juristic_data.loc[stockid][0]) - int(juristic_data.loc[stockid][1]); #法人買賣超
-                    juristic_volumn /= 1000.0
-                changes = float(price_data.loc[stockid][6])
-                up_down = str(price_data.loc[stockid][5]) 
-                if up_down == '-':
-                    changes *= -1
-                elif up_down == 'nan':
-                    up_down = 'x'
-
-                volumn = float(price_data.loc[stockid][0]) / 1000.0
-                    
-                value = '\'' + stockid                          + '\','  + mysql_date                       + ', '   + str(volumn ) + \
-                        ', ' + str(price_data.loc[stockid][1] ) + ', '   + str(price_data.loc[stockid][2] ) + ', '   + str(price_data.loc[stockid][3] ) + \
-                        ', ' + str(price_data.loc[stockid][4] ) + ', '   + str(changes) + ', \'' + up_down + '\','   + str(juristic_volumn)           + \
-                        ', ' + str(price_data.loc[stockid][7] )
-                
-                mysql_cmd.insert_stock_data_into_db(sdbcur, value)
-        ### end for
         if update_juristic:
             print('parsing juristic data...')
-            sql_cmd = 'SELECT EXISTS(SELECT 1 FROM JURISTICDB WHERE date = ' + mysql_date + ');'
-            sdbcur.execute(sql_cmd)
-            row = sdbcur.fetchall()
-            if row[0][0] == 1:
+            jur_vol_data = get_twse_juristic_person_daily_volume_rpt(date)
+            if mysql_cmd.check_db_specific_date_exists(dbcur, 'JURISTICDB', date_str):
                 print('warning: juristic data exists!')
-                break
-
+                continue
             value = mysql_date + ", " + \
                 str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['買進金額']) + ', ' + \
                 str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['賣出金額']) + ', ' + \
                 str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['買賣差額']) 
 
             mysql_cmd.insert_juristic_data_into_db(dbcur, value)
+        ### end if
+        if update_stock:
+            price_data     = get_twse_price_rpt(date_str)
+            juristic_data  = get_twse_juristic_person_volume_rpt(date)
 
+            print('parsing stock data...')
+            if mysql_cmd.check_db_specific_date_exists(dbcur, 'STOCKDB', date_str):
+                print('warning: stock data exists!')
+                fail_count += 1
+                continue
+
+            for stockid in price_data.index:
+                if str(price_data.loc[stockid][StockCSVTableIndex.CLOSE]) != '--':
+                    juristic_volume = 0
+                    if stockid in juristic_data.index:
+                        juristic_volume = int(juristic_data.loc[stockid][StockJuristicTableIndex.BUY_VOLUME]) - int(juristic_data.loc[stockid][StockJuristicTableIndex.SOLD_VOLUME]);
+                        juristic_volume /= 1000.0
+                    changes = float(price_data.loc[stockid][StockCSVTableIndex.CHANGES])
+                    up_down = str(price_data.loc[stockid][StockCSVTableIndex.UP_DOWN]) 
+                    if up_down == '-':
+                        changes *= -1
+                    elif up_down == 'nan':
+                        up_down = 'x'
+
+                    volume = float(price_data.loc[stockid][StockCSVTableIndex.VOLUME]) / 1000.0
+                        
+                    value = '\'%s\', %s, %s, %s, %s, %s, %s, %s, \'%s\', %s, %s' % \
+                        (stockid, \
+                         mysql_date, \
+                         str(volume), \
+                         str(price_data.loc[stockid][StockCSVTableIndex.OPEN]), \
+                         str(price_data.loc[stockid][StockCSVTableIndex.HIGH]), \
+                         str(price_data.loc[stockid][StockCSVTableIndex.LOW]), \
+                         str(price_data.loc[stockid][StockCSVTableIndex.CLOSE]), \
+                         str(changes), \
+                         up_down, \
+                         str(juristic_volume), \
+                         str(price_data.loc[stockid][StockCSVTableIndex.PE_RATIO]), \
+                        )
+                    mysql_cmd.insert_stock_data_into_db(dbcur, value)
+            ### end for
+        ### end if
+        stockdb.commit()
+        fail_count = 0
     except:
         print('fail! check the date is holiday')
         fail_count += 1
@@ -144,5 +167,5 @@ while date_count < n_days:
     date -= datetime.timedelta(days=1)
     time.sleep(10)
 
-stockdb.commit()
+
 stockdb.close()

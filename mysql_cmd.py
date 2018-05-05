@@ -1,19 +1,4 @@
 import pymysql
-import enum
-
-class StockTableIndex(enum.IntEnum):
-    STOCKID             = 0
-    DATE                = 1
-    VOLUMN              = 2
-    OPEN                = 3
-    HIGH                = 4
-    LOW                 = 5
-    CLOSE               = 6
-    CHANGES             = 7
-    UP_DOWN             = 8
-    JURISTIC_VOLUMN     = 9
-    PE_RATIO            = 10
-
 
 def check_mysql_table_exists(dbcon, tablename):
     dbcur = dbcon.cursor()
@@ -34,14 +19,14 @@ def create_stockdb_table(dbcur):
                         CREATE TABLE STOCKDB (
                             stockid CHAR(16),
                             date DATE,
-                            volumn FLOAT,
+                            volume FLOAT,
                             open FLOAT,
                             high FLOAT,
                             low FLOAT,
                             close FLOAT,
                             changes FLOAT,
                             up_down CHAR(1),
-                            juristic_volumn FLOAT,
+                            juristic_volume FLOAT,
                             pe_ratio FLOAT
                         );
                   """)
@@ -50,21 +35,21 @@ def create_juristicdb_table(dbcur):
     dbcur.execute("""
                         CREATE TABLE JURISTICDB (
                             date DATE,
-                            buy_volumn  BIGINT,
-                            sold_volumn BIGINT,
-                            diff_volumn BIGINT
+                            buy_volume  BIGINT,
+                            sold_volume BIGINT,
+                            diff_volume BIGINT
                         );
                   """)
 
 def insert_stock_data_into_db(dbcur, value):
-    sdb_index = 'stockid, date, volumn, open, high, low, close, changes, up_down, juristic_volumn, pe_ratio'
+    sdb_index = 'stockid, date, volume, open, high, low, close, changes, up_down, juristic_volume, pe_ratio'
     sql_cmd = 'INSERT INTO STOCKDB(' + sdb_index + ') VALUES(' + value + ');'
     dbcur.execute(sql_cmd)
 
 def insert_juristic_data_into_db(dbcur, value):
-    jdb_index = 'date, buy_volumn, sold_volumn, diff_volumn'
+    jdb_index = 'date, buy_volume, sold_volume, diff_volume'
     sql_cmd = 'INSERT INTO JURISTICDB(' + jdb_index + ') VALUES(' + value + ');'
-    sdbcur.execute(sql_cmd)
+    dbcur.execute(sql_cmd)
 
 def get_mysql_fetch_stock_data_cmd_between_period_date(stockid, time_period):
     sql_cmd = 'SELECT * FROM STOCKDB WHERE stockid = \'' + str(stockid) + \
@@ -73,3 +58,10 @@ def get_mysql_fetch_stock_data_cmd_between_period_date(stockid, time_period):
 
 def get_mysql_str2date_cmd(date):
     return 'str_to_date(\'' + str(date) + '\',\'%Y-%m-%d\')'
+
+def check_db_specific_date_exists(dbcur, table, date):
+    sql_cmd = 'SELECT EXISTS(SELECT 1 FROM ' + table + ' WHERE date = ' + get_mysql_str2date_cmd(date) + ');'
+    dbcur.execute(sql_cmd)
+    row = dbcur.fetchall()
+    return (row[0][0] == 1)
+
