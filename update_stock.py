@@ -76,9 +76,9 @@ def get_twse_juristic_person_daily_volume_rpt(date):
 
 ## main
 n_days = 1
-date = datetime.datetime.now().date()
+#date = datetime.datetime.now().date()
 #date = datetime.datetime(2017, 4, 19).date()
-#date = datetime.datetime(2017, 12, 25).date()
+date = datetime.datetime(2018, 5, 7).date()
 update_stock    = True
 update_juristic = True
 
@@ -105,16 +105,17 @@ while date_count < n_days:
             if mysql_cmd.check_db_specific_date_exists(dbcur, 'JURISTICDB', date_str):
                 print('warning: juristic data exists!')
                 continue
-            value = mysql_date + ", " + \
-                str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['買進金額']) + ', ' + \
-                str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['賣出金額']) + ', ' + \
-                str(jur_vol_data.loc['外資及陸資(不含外資自營商)']['買賣差額']) 
+            mysql_cmd.insert_juristic_data_into_db(dbcur, \
+                date=mysql_date, \
+                buy  = jur_vol_data.loc['外資及陸資(不含外資自營商)']['買進金額'], \
+                sold = jur_vol_data.loc['外資及陸資(不含外資自營商)']['賣出金額'], \
+                diff = jur_vol_data.loc['外資及陸資(不含外資自營商)']['買賣差額']  \
+            )
 
-            mysql_cmd.insert_juristic_data_into_db(dbcur, value)
         ### end if
         if update_stock:
-            price_data     = get_twse_price_rpt(date_str)
-            juristic_data  = get_twse_juristic_person_volume_rpt(date)
+            price_data    = get_twse_price_rpt(date_str)
+            juristic_data = get_twse_juristic_person_volume_rpt(date)
 
             print('parsing stock data...')
             if mysql_cmd.check_db_specific_date_exists(dbcur, 'STOCKDB', date_str):
@@ -126,31 +127,32 @@ while date_count < n_days:
                 if str(price_data.loc[stockid][StockCSVTableIndex.CLOSE]) != '--':
                     juristic_volume = 0
                     if stockid in juristic_data.index:
-                        juristic_volume = int(juristic_data.loc[stockid][StockJuristicTableIndex.BUY_VOLUME]) - int(juristic_data.loc[stockid][StockJuristicTableIndex.SOLD_VOLUME]);
-                        juristic_volume /= 1000.0
+                        buy_volume  = int(juristic_data.loc[stockid][StockJuristicTableIndex.BUY_VOLUME])
+                        sold_volume = int(juristic_data.loc[stockid][StockJuristicTableIndex.SOLD_VOLUME])
+                        juristic_volume = (buy_volume - sold_volume) / 1000.0
+
+                    volume  = float(price_data.loc[stockid][StockCSVTableIndex.VOLUME]) / 1000.0
                     changes = float(price_data.loc[stockid][StockCSVTableIndex.CHANGES])
-                    up_down = str(price_data.loc[stockid][StockCSVTableIndex.UP_DOWN]) 
+                    up_down =   str(price_data.loc[stockid][StockCSVTableIndex.UP_DOWN]) 
+
                     if up_down == '-':
                         changes *= -1
                     elif up_down == 'nan':
                         up_down = 'x'
-
-                    volume = float(price_data.loc[stockid][StockCSVTableIndex.VOLUME]) / 1000.0
                         
-                    value = '\'%s\', %s, %s, %s, %s, %s, %s, %s, \'%s\', %s, %s' % \
-                        (stockid, \
-                         mysql_date, \
-                         str(volume), \
-                         str(price_data.loc[stockid][StockCSVTableIndex.OPEN]), \
-                         str(price_data.loc[stockid][StockCSVTableIndex.HIGH]), \
-                         str(price_data.loc[stockid][StockCSVTableIndex.LOW]), \
-                         str(price_data.loc[stockid][StockCSVTableIndex.CLOSE]), \
-                         str(changes), \
-                         up_down, \
-                         str(juristic_volume), \
-                         str(price_data.loc[stockid][StockCSVTableIndex.PE_RATIO]), \
-                        )
-                    mysql_cmd.insert_stock_data_into_db(dbcur, value)
+                    mysql_cmd.insert_stock_data_into_db(dbcur,
+                        stockid         = stockid, \
+                        date            = mysql_date, \
+                        volume          = volume, \
+                        changes         = changes, \
+                        up_down         = up_down, \
+                        juristic_volume = juristic_volume, \
+                        open_price      = price_data.loc[stockid][StockCSVTableIndex.OPEN], \
+                        high_price      = price_data.loc[stockid][StockCSVTableIndex.HIGH], \
+                        low_price       = price_data.loc[stockid][StockCSVTableIndex.LOW],  \
+                        close_price     = price_data.loc[stockid][StockCSVTableIndex.CLOSE],\
+                        pe_ratio        = price_data.loc[stockid][StockCSVTableIndex.PE_RATIO] \
+                    )
             ### end for
         ### end if
         stockdb.commit()

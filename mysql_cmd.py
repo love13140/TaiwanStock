@@ -41,12 +41,26 @@ def create_juristicdb_table(dbcur):
                         );
                   """)
 
-def insert_stock_data_into_db(dbcur, value):
+def insert_stock_data_into_db(dbcur, stockid, date, volume, open_price, high_price, low_price, close_price, changes, up_down, juristic_volume, pe_ratio):
+    value = '\'%s\', %s, %s, %s, %s, %s, %s, %s, \'%s\', %s, %s' % \
+        (str(stockid), \
+         str(date), \
+         str(volume), \
+         str(open_price), \
+         str(high_price), \
+         str(low_price), \
+         str(close_price), \
+         str(changes), \
+         str(up_down), \
+         str(juristic_volume), \
+         str(pe_ratio) \
+        )
     sdb_index = 'stockid, date, volume, open, high, low, close, changes, up_down, juristic_volume, pe_ratio'
     sql_cmd = 'INSERT INTO STOCKDB(' + sdb_index + ') VALUES(' + value + ');'
     dbcur.execute(sql_cmd)
 
-def insert_juristic_data_into_db(dbcur, value):
+def insert_juristic_data_into_db(dbcur, date, buy, sold, diff):
+    value = '%s, %s, %s, %s' % (str(date), str(buy), str(sold), str(diff))
     jdb_index = 'date, buy_volume, sold_volume, diff_volume'
     sql_cmd = 'INSERT INTO JURISTICDB(' + jdb_index + ') VALUES(' + value + ');'
     dbcur.execute(sql_cmd)
