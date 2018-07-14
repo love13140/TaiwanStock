@@ -76,9 +76,9 @@ def get_twse_juristic_person_daily_volume_rpt(date):
 
 ## main
 n_days = 1
-#date = datetime.datetime.now().date()
+date = datetime.datetime.now().date()
 #date = datetime.datetime(2017, 4, 19).date()
-date = datetime.datetime(2018, 5, 7).date()
+#date = datetime.datetime(2018, 7, 12).date()
 update_stock    = True
 update_juristic = True
 
@@ -104,7 +104,7 @@ while date_count < n_days:
             jur_vol_data = get_twse_juristic_person_daily_volume_rpt(date)
             if mysql_cmd.check_db_specific_date_exists(dbcur, 'JURISTICDB', date_str):
                 print('warning: juristic data exists!')
-                continue
+                raise
             mysql_cmd.insert_juristic_data_into_db(dbcur, \
                 date=mysql_date, \
                 buy  = jur_vol_data.loc['外資及陸資(不含外資自營商)']['買進金額'], \
@@ -120,8 +120,7 @@ while date_count < n_days:
             print('parsing stock data...')
             if mysql_cmd.check_db_specific_date_exists(dbcur, 'STOCKDB', date_str):
                 print('warning: stock data exists!')
-                fail_count += 1
-                continue
+                raise
 
             for stockid in price_data.index:
                 if str(price_data.loc[stockid][StockCSVTableIndex.CLOSE]) != '--':
@@ -158,7 +157,7 @@ while date_count < n_days:
         stockdb.commit()
         fail_count = 0
     except:
-        print('fail! check the date is holiday')
+        print('Error: exeception raised!')
         fail_count += 1
         if fail_count == allow_continuous_fail_count:
             raise

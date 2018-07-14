@@ -1,5 +1,6 @@
 #!/usr/local/bin/python3
 
+import sys
 import pymysql
 import numpy as np
 import pandas.io.sql as pdsql
@@ -12,9 +13,14 @@ def get_mysql_fetch_cmd( time_period ):
     sql_cmd = 'SELECT * FROM JURISTICDB WHERE DATE(date) BETWEEN str_to_date(\'2018-01-01\',\'%Y-%m-%d\' ) AND CURRENT_DATE() ORDER BY date;' 
     return sql_cmd
 
+if len(sys.argv) > 1:
+    period = sys.argv[1]
+else:
+    period = 360
+
 ## main 
 stockdb = pymysql.connect(db = 'stockdb', user='root', passwd='root', host='localhost', unix_socket='/tmp/mysql.sock')
-sql_cmd = get_mysql_fetch_cmd( time_period=360 )
+sql_cmd = get_mysql_fetch_cmd( time_period=period )
 data_frame = pdsql.read_sql_query(sql_cmd, stockdb)
 stockdb.close()
 

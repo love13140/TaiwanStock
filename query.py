@@ -33,7 +33,7 @@ for sid in stock_list:
             rsi5  = analysis.RSI5(data_frame['close'])
             ma20  = analysis.MA20(data_frame['close'])
             ma60  = analysis.MA60(data_frame['close'])
-            ma120 = analysis.MA120(data_frame['close'])
+            #ma120 = analysis.MA120(data_frame['close'])
             
             jtl   = [int(i) for i in data_frame['juristic_volume'][0:3]]
             cl    = data_frame['close'][0:3]
@@ -52,6 +52,6 @@ for sid in stock_list:
             elif signal1day:
                 signal += ', 連續二日買進信號'
 
-            print('%s: Close3D=[%7.2f, %7.2f, %7.2f], MA20/60=[%7.2f, %7.2f], Juristic3D=[%5d, %5d, %5d] : %s'
-                     % (sid, cl[0], cl[1], cl[2], ma20, ma60, jtl[0], jtl[1], jtl[2], signal))
+            print('%s%4s: Close3D=[%7.2f, %7.2f, %7.2f], MA20/60=[%7.2f, %7.2f], Juristic3D=[%5d, %5d, %5d] : %s'
+                     % (sid, codes[sid].name, cl[0], cl[1], cl[2], ma20, ma60, jtl[0], jtl[1], jtl[2], signal))
 stockdb.close()

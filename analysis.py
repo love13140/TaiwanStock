@@ -86,19 +86,20 @@ def get_buy_signal(data_frame):
         return False
 
     signal = ''
-    if close_overthan_MA20_overthan_MA60(data_frame['close']) and close_overthan_MA60_overthan_MA120(data_frame['close']):
-        signal += 'Close>MA20>MA60>MA120'
-    elif close_overthan_MA20_overthan_MA60(data_frame['close']):
+    ## if close_overthan_MA20_overthan_MA60(data_frame['close']) and close_overthan_MA60_overthan_MA120(data_frame['close']):
+    ##     signal += 'Close>MA20>MA60>MA120'
+    if close_overthan_MA20_overthan_MA60(data_frame['close']):
         signal += 'Close>MA20>MA60'
-    elif close_overthan_MA60_overthan_MA120(data_frame['close']):
-        signal += 'Close>MA60>MA120'
+    ## elif close_overthan_MA60_overthan_MA120(data_frame['close']):
+    ##     signal += 'Close>MA60>MA120'
     else:
         return False
 
     RSI_signal = True
     rsi5 = RSI5(data_frame['close'])
-    if RSI5_between_28_and_18(data_frame['close']):
-        signal += ', RSI 顯示超賣:%4.2f' % rsi5
+    ## if RSI5_between_28_and_18(data_frame['close']):
+    if RSI5(data_frame['close']) < 28:
+         signal += ', RSI 顯示超賣:%4.2f' % rsi5
     elif RSI5(data_frame['close']) > 85:
         signal += ', RSI 顯示超買:%4.2f' % rsi5
         RSI_signal = False

@@ -75,7 +75,7 @@ if codes[sid]:
                 print('%3d 天法人最大賣超量  : %11.2f' % (dd, get_period_days_data(data_frame, dd, min, 'juristic_volume')))
                 print('%3d 天法人最大買超量  : %11.2f' % (dd, get_period_days_data(data_frame, dd, max, 'juristic_volume')))
                 print('')
-        ## show_juristic_plot(data_frame)
+        show_juristic_plot(data_frame)
         ## df = np.array(data_frame[::-1])
         ## print(df.loc['close'])
         
